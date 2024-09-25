@@ -41,7 +41,7 @@ courseRouter.post("/purchase",userMiddleware,async (req,res)=>{
 courseRouter.get("/preview",async (req,res)=>{
 
     try{
-        const courses = await courseModel.find({})
+        const courses = await courseModel.find({}).populate({path:'createrId',select: 'email -_id'}).exec()
 
         return res.status(200).json({
             courses

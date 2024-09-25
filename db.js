@@ -77,7 +77,8 @@ const purchaseSchema = new Schema({
 
     courseId:{
         type:ObjectId,
-        ref:'course'
+        ref:'course',
+        required:true
     },
     userId:{
         type:ObjectId,

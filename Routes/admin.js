@@ -204,12 +204,11 @@ adminRouter.get("/course/bulk",adminMiddleware,async (req,res)=>{
     const adminId = req.adminId;
 
     try {
-        const coursesArray = await courseModel.find({createrId:adminId}) 
+        const coursesArray = await courseModel.find({createrId:adminId}).populate({path:'createrId',select:'email -_id'}) 
 
         return res.status(200).json({
             message:"GOT ALL THE COURSES THAT WERE CREATED BY ADMIN ",
-            numberOfCourses:coursesArray.length,
-            courseAdmin:coursesArray[0].createrId
+            coursesArray
         })
     } catch (error) {
         console.log(error);
