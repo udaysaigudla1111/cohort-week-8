@@ -2,10 +2,10 @@ const {Router, application} = require("express");
 const adminRouter = Router();
 const {z} = require("zod")
 const jwt = require("jsonwebtoken")
-const JWT_SECRET=process.env.JWT_SECRET
+const JWT_ADMIN_SECRET=process.env.JWT_ADMIN_SECRET
 const bcrypt = require("bcrypt")
-
-const {adminModel} = require("../db.js");
+const {adminMiddleware} = require("../middleware/admin")
+const {adminModel,courseModel} = require("../db.js");
 
 
 
@@ -96,7 +96,7 @@ adminRouter.post("/signin",async (req,res)=>{
                 {
                     const token = jwt.sign({
                         id:adminExists._id
-                    },JWT_SECRET)
+                    },JWT_ADMIN_SECRET)
 
                     return res.status(200).json({
                         token
@@ -123,7 +123,101 @@ adminRouter.post("/signin",async (req,res)=>{
   
 })
 
+adminRouter.post("/course",adminMiddleware,async (req,res)=>{
+
+    const adminId = req.adminId
+    const {title,description,price,imageUrl} = req.body
+
+    try {
+        
+        const course = await courseModel.create({
+            title,
+            description,
+            price,
+            imageUrl,
+            createrId:adminId
+        })
+
+        return res.status(200).json({
+            message:"COURSE CREATED SUCCESSFULLY",
+            courseId:course._id
+        })
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message:"INTERNAL SERVER ERROR"
+        })
+    }
+
+})
+
+adminRouter.put("/course",adminMiddleware,async (req,res)=>{
+    const adminId = req.adminId;
+
+    const {title,description,price,imageUrl,courseId} = req.body;
+
+    try {
+         
+    const course = await courseModel.findOne({_id:courseId});
+
+    if(course.createrId.toString()!==adminId)
+    {   
+        console.log(`${course.createrId} type is ${typeof course.createrId}`);
+        console.log(`The token adminId is ${adminId} and type is ${typeof adminId}`);
+        
+        return res.status(400).json({
+            message:"The CourseId does not belongs to ADMIN"
+        })
+    }
+
+    const updatedCourse = await courseModel.findOneAndUpdate({
+        _id:courseId
+    },
+    {
+        title,
+        price,
+        description,
+        imageUrl
+    },{
+        new:true,
+        runValidators:true
+    }
+    )
+
+    return res.status(200).json({
+        message:"COURSE UPDATED SUCCESSFULLY",
+        updatedCourse
+    })
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message: "INTERNAL SERVER ERROR"
+        })
+    }
 
 
+})
+
+adminRouter.get("/course/bulk",adminMiddleware,async (req,res)=>{
+    const adminId = req.adminId;
+
+    try {
+        const coursesArray = await courseModel.find({createrId:adminId}) 
+
+        return res.status(200).json({
+            message:"GOT ALL THE COURSES THAT WERE CREATED BY ADMIN ",
+            numberOfCourses:coursesArray.length,
+            courseAdmin:coursesArray[0].createrId
+        })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message:"INTERNAL SERVER ERROR"
+        })
+    }
+
+})
 
 module.exports = { adminRouter }

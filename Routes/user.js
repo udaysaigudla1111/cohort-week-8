@@ -1,10 +1,11 @@
 const { Router } = require("express")
-const {userModel} = require("../db.js")
+const {userModel,purchaseModel} = require("../db.js")
 const bcrypt = require("bcrypt")
 const {z} = require("zod")
 const jwt = require("jsonwebtoken")
-const JWT_SECRET=process.env.JWT_SECRET
+const JWT_USER_SECRET=process.env.JWT_USER_SECRET
 const { parse } = require("dotenv")
+const {userMiddleware} = require("../middleware/user.js")
 const userRouter = Router();
  
 userRouter.post("/signup",async (req,res)=>{
@@ -38,7 +39,7 @@ userRouter.post("/signup",async (req,res)=>{
             })
         }
  
-        const hashedPassword = bcrypt.hash(password,5)
+        const hashedPassword = await bcrypt.hash(password,5)
         
         const user = await userModel.create({
             email,
@@ -89,7 +90,7 @@ userRouter.post("/signin",async (req,res)=>{
             {
                 const token = jwt.sign({
                     id:userExists._id
-                },JWT_SECRET)
+                },JWT_USER_SECRET)
 
                 return res.status(200).json({
                     token
@@ -116,4 +117,24 @@ userRouter.post("/signin",async (req,res)=>{
  
 })
  
+userRouter.get("/purchases",userMiddleware,async (req,res)=>{
+
+    const userId = req.userId;
+
+    try {
+        const purchasedCourses = await purchaseModel.find({userId:userId}).populate('courseId').exec();
+        
+        return res.status(200).json({
+            purchasedCourses
+        })
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message:"INTERNAL SERVER ERROR"
+        })
+    }
+
+})
+
 module.exports = { userRouter }
